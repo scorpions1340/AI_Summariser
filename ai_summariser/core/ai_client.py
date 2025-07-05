@@ -48,14 +48,15 @@ class FreeGPTClient:
         """Выполнить HTTP запрос с повторными попытками"""
         if self._client is None:
             self._client = httpx.AsyncClient(timeout=self.timeout)
+        client: httpx.AsyncClient = self._client
         
         url = f"{self.base_url}{endpoint}"
         
         try:
             if method.upper() == "POST":
-                response = await self._client.post(url, json=data)
+                response = await client.post(url, json=data)
             else:
-                response = await self._client.get(url)
+                response = await client.get(url)
             
             response.raise_for_status()
             return response.json()

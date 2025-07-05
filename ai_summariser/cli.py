@@ -48,8 +48,8 @@ async def summarise_folder(
     async with TelegramSummariser(db_path) as summariser:
         summary = await summariser.summarise_folder(
             folder_id=folder_id,
-            limit=limit,
-            days_back=days_back
+            limit=limit if limit is not None else 20,
+            days_back=days_back if days_back is not None else 7
         )
         
         if not summary:
@@ -57,7 +57,7 @@ async def summarise_folder(
             return
         
         if format_output == "json":
-            output = summary.model_dump_json(indent=2, ensure_ascii=False)
+            output = json.dumps(summary.model_dump(), indent=2, ensure_ascii=False)
         else:
             output = format_summary_text(summary)
         
@@ -82,8 +82,8 @@ async def ask_question(
         response = await summariser.ask_about_posts(
             folder_id=folder_id,
             question=question,
-            limit=limit,
-            days_back=days_back
+            limit=limit if limit is not None else 20,
+            days_back=days_back if days_back is not None else 7
         )
         
         if not response:
@@ -119,7 +119,7 @@ async def search_posts(
         summary = await summariser.search_and_summarise(
             folder_id=folder_id,
             search_term=search_term,
-            limit=limit
+            limit=limit if limit is not None else 20
         )
         
         if not summary:
