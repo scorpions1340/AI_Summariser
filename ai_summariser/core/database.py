@@ -6,7 +6,7 @@ import aiosqlite
 import asyncio
 from typing import List, Optional, Dict, Any
 from datetime import datetime, timedelta
-from ..models.schemas import Post, Channel, Folder
+from ai_summariser.models.schemas import Post, Channel, Folder
 
 
 class DatabaseManager:
@@ -87,7 +87,7 @@ class DatabaseManager:
             return []
         
         query = """
-            SELECT p.id, p.channel_id, p.tg_post_id, p.date, p.text, p.link, p.created_at
+            SELECT p.id, c.folder_id, p.channel_id, p.tg_post_id, p.date, p.text, p.link, p.created_at
             FROM posts p
             JOIN channels c ON p.channel_id = c.id
             WHERE c.folder_id = ?
@@ -120,10 +120,11 @@ class DatabaseManager:
             return []
         
         query = """
-            SELECT id, channel_id, tg_post_id, date, text, link, created_at
-            FROM posts
-            WHERE channel_id = ?
-            ORDER BY date DESC
+            SELECT p.id, c.folder_id, p.channel_id, p.tg_post_id, p.date, p.text, p.link, p.created_at
+            FROM posts p
+            JOIN channels c ON p.channel_id = c.id
+            WHERE p.channel_id = ?
+            ORDER BY p.date DESC
         """
         params: List[Any] = [channel_id]
         
@@ -164,7 +165,7 @@ class DatabaseManager:
             return []
         async with self._connection.execute(
             """
-            SELECT p.id, p.channel_id, p.tg_post_id, p.date, p.text, p.link, p.created_at
+            SELECT p.id, c.folder_id, p.channel_id, p.tg_post_id, p.date, p.text, p.link, p.created_at
             FROM posts p
             JOIN channels c ON p.channel_id = c.id
             WHERE c.folder_id = ? AND p.text LIKE ?

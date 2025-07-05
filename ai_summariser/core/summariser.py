@@ -7,9 +7,9 @@ import logging
 from typing import List, Optional, Dict, Any
 from datetime import datetime, timedelta
 
-from .database import DatabaseManager
-from .ai_client import FreeGPTClient
-from ..models.schemas import Post, Summary, PostSummary, AIResponse, Folder
+from ai_summariser.core.database import DatabaseManager
+from ai_summariser.core.ai_client import FreeGPTClient
+from ai_summariser.models.schemas import Post, Summary, PostSummary, AIResponse, Folder
 
 logger = logging.getLogger(__name__)
 
@@ -20,7 +20,7 @@ class TelegramSummariser:
     def __init__(
         self, 
         db_path: str,
-        freegpt_url: str = "http://127.0.0.1:1338",
+        freegpt_url: str = "http://127.0.0.1:1337",
         timeout: int = 30
     ):
         self.db_manager = DatabaseManager(db_path)

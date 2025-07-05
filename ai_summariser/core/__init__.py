@@ -2,8 +2,8 @@
 Основные компоненты AI Summariser
 """
 
-from .database import DatabaseManager
-from .ai_client import FreeGPTClient
-from .summariser import TelegramSummariser
+from ai_summariser.core.database import DatabaseManager
+from ai_summariser.core.ai_client import FreeGPTClient
+from ai_summariser.core.summariser import TelegramSummariser
 
 __all__ = ["DatabaseManager", "FreeGPTClient", "TelegramSummariser"] 

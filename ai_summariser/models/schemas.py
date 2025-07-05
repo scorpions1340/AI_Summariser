@@ -10,6 +10,7 @@ from pydantic import BaseModel, HttpUrl
 class Post(BaseModel):
     """Модель поста из Telegram"""
     id: int
+    folder_id: int
     channel_id: int
     tg_post_id: int
     date: datetime
