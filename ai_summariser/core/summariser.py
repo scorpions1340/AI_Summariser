@@ -100,7 +100,7 @@ class TelegramSummariser:
                 
                 post_summaries.append(PostSummary(
                     post_id=post.id,
-                    channel_title=channel_title,
+                    channel_title=channel_title or "",
                     date=post.date,
                     summary=post.text[:200] + "..." if post.text and len(post.text) > 200 else (post.text or "Нет текста"),
                     link=post_link
@@ -258,7 +258,7 @@ class TelegramSummariser:
                 
                 post_summaries.append(PostSummary(
                     post_id=post.id,
-                    channel_title=channel_title,
+                    channel_title=channel_title or "",
                     date=post.date,
                     summary=post.text[:200] + "..." if post.text and len(post.text) > 200 else (post.text or "Нет текста"),
                     link=post_link

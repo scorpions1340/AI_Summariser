@@ -1,9 +1,10 @@
 """
-Клиент для работы с FreeGPT API
+Клиент для работы с FreeGPT API (WebUI)
 """
 
 import httpx
 import asyncio
+import uuid
 from typing import Optional, Dict, Any, List
 import json
 import logging
@@ -13,7 +14,7 @@ logger = logging.getLogger(__name__)
 
 
 class FreeGPTClient:
-    """Асинхронный клиент для работы с FreeGPT API"""
+    """Асинхронный клиент для работы с FreeGPT API (WebUI)"""
     
     def __init__(
         self, 
@@ -75,10 +76,72 @@ class FreeGPTClient:
                 return await self._make_request(method, endpoint, data, retry_count + 1)
             raise
     
+    async def _make_stream_request(self, prompt: str, model: str = "mixtral-8x7b", provider: str = "Auto") -> str:
+        """Выполнить запрос к FreeGPT API с правильным форматом"""
+        if self._client is None:
+            self._client = httpx.AsyncClient(timeout=self.timeout)
+        
+        conversation_id = str(uuid.uuid4())
+        url = f"{self.base_url}/backend-api/v2/conversation"
+        
+        # Формат запроса согласно FreeGPT API
+        payload = {
+            "temperature": 0.2,
+            "top_k": 10,
+            "typical_p": 0.8,
+            "no_repeat_n": 2,
+            "early_stopping": True,
+            "frequency_WPF_penalty": 2.0,
+            "max_tokens": 2048,
+            "conversation_id": conversation_id,
+            "action": "_ask",
+            "model": model,
+            "provider": f"g4f.Provider.{provider}" if provider != "Auto" else "Auto",
+            "meta": {
+                "id": str(uuid.uuid4()),
+                "content": {
+                    "conversation": [],
+                    "internet_access": True,
+                    "content_type": "text",
+                    "parts": [
+                        {
+                            "content": prompt,
+                            "role": "user",
+                        },
+                    ],
+                },
+            },
+        }
+        
+        try:
+            response = await self._client.post(url, json=payload)
+            response.raise_for_status()
+            
+            # Обрабатываем stream response
+            full_response = ""
+            async for line in response.aiter_lines():
+                if line.startswith("data: "):
+                    try:
+                        data = json.loads(line[6:])  # Убираем "data: "
+                        if "content" in data:
+                            full_response += data["content"]
+                    except json.JSONDecodeError:
+                        continue
+            
+            return full_response.strip()
+            
+        except Exception as e:
+            logger.error(f"Error in stream request: {e}")
+            raise
+    
     async def health_check(self) -> bool:
         """Проверить доступность FreeGPT сервера"""
         try:
-            await self._make_request("GET", "/")
+            if self._client is None:
+                self._client = httpx.AsyncClient(timeout=self.timeout)
+            
+            response = await self._client.get(f"{self.base_url}/chat/")
+            response.raise_for_status()
             return True
         except Exception as e:
             logger.warning(f"FreeGPT health check failed: {e}")
@@ -106,16 +169,8 @@ class FreeGPTClient:
         """
         
         try:
-            response = await self._make_request("POST", "/api/v1/chat", {
-                "message": prompt,
-                "model": "gpt-3.5-turbo"  # или другой доступный модель
-            })
-            
-            if "response" in response:
-                return response["response"][:max_length]
-            else:
-                logger.error(f"Unexpected response format: {response}")
-                return "Ошибка при генерации сводки."
+            response = await self._make_stream_request(prompt, model="mixtral-8x7b")
+            return response[:max_length] if response else "Ошибка при генерации сводки."
                 
         except Exception as e:
             logger.error(f"Error generating summary: {e}")
@@ -146,16 +201,8 @@ class FreeGPTClient:
         """
         
         try:
-            response = await self._make_request("POST", "/api/v1/chat", {
-                "message": prompt,
-                "model": "gpt-3.5-turbo"
-            })
-            
-            if "response" in response:
-                return response["response"][:max_length]
-            else:
-                logger.error(f"Unexpected response format: {response}")
-                return "Ошибка при генерации ответа."
+            response = await self._make_stream_request(prompt, model="mixtral-8x7b")
+            return response[:max_length] if response else "Ошибка при генерации ответа."
                 
         except Exception as e:
             logger.error(f"Error answering question: {e}")
@@ -179,15 +226,12 @@ class FreeGPTClient:
         """
         
         try:
-            response = await self._make_request("POST", "/api/v1/chat", {
-                "message": prompt,
-                "model": "gpt-3.5-turbo"
-            })
+            response = await self._make_stream_request(prompt, model="mixtral-8x7b")
             
-            if "response" in response:
+            if response:
                 try:
                     # Пытаемся парсить JSON из ответа
-                    topics_text = response["response"]
+                    topics_text = response
                     # Ищем JSON в ответе
                     start_idx = topics_text.find('[')
                     end_idx = topics_text.rfind(']') + 1
@@ -197,7 +241,7 @@ class FreeGPTClient:
                         return topics[:7]  # Ограничиваем до 7 тем
                 except (json.JSONDecodeError, ValueError):
                     # Если не удалось парсить JSON, извлекаем темы из текста
-                    return self._extract_topics_from_text(response["response"])
+                    return self._extract_topics_from_text(response)
             
             return []
             
